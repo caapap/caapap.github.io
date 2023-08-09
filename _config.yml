@@ -5,9 +5,9 @@ description: > # this means to ignore newlines until "twitter_username:"
   the singularity is nearer
 
 # social links
-twitter_username: caapap
+twitter_username: yescaapap
 github_username:  caapap
-rss: rss
+#rss: rss
 # dribbble_username: jekyll
 # facebook_username: jekyll
 # flickr_username: jekyll
