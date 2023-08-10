@@ -7,6 +7,7 @@ But eventually the mine dried up. The miners lost their jobs, since the town was
 
 ---  
 <br>
+
 **All jobs can be broken down into one of three groups.**
 
 The first(constant) is the shoeshiners, bank tellers, politicians, retail workers, clergy, social media managers, lawyers, and the rest of the service industry. An economy made up of only these people wouldn’t work. Imagine a town without imports and exports comprised of only this class of people. Considering every transaction always has a fee, regardless of what this town started with, they would always end up going broke.
