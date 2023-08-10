@@ -5,8 +5,7 @@ Consider a mining town. Once upon a time there was a mine, and the mine was the 
 
 But eventually the mine dried up. The miners lost their jobs, since the town was no longer bringing in enough money to pay them. The doctor, realtor, and waiter were still employed, as their “mines” didn’t dry up. But they did, as they were really just mining the miners. The town persisted for a bit, passing the same money around in a circle. But with each pass, there was a transaction fee. And there were still things like food, which needed to be imported into the town.
 
-___
-
+---
 
 **All jobs can be broken down into one of three groups.**
 
