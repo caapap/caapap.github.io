@@ -5,9 +5,9 @@ Consider a mining town. Once upon a time there was a mine, and the mine was the 
 
 But eventually the mine dried up. The miners lost their jobs, since the town was no longer bringing in enough money to pay them. The doctor, realtor, and waiter were still employed, as their “mines” didn’t dry up. But they did, as they were really just mining the miners. The town persisted for a bit, passing the same money around in a circle. But with each pass, there was a transaction fee. And there were still things like food, which needed to be imported into the town.
 
----  
-<br>
+----
 
+  
 **All jobs can be broken down into one of three groups.**
 
 The first(constant) is the shoeshiners, bank tellers, politicians, retail workers, clergy, social media managers, lawyers, and the rest of the service industry. An economy made up of only these people wouldn’t work. Imagine a town without imports and exports comprised of only this class of people. Considering every transaction always has a fee, regardless of what this town started with, they would always end up going broke.
