@@ -22,10 +22,11 @@ Install kubernetes cluster with ansible
 | kubenetes |  default version 1.20.11 | `kubectl version` |
 | CNI | flannel 0.13.0 or higher | `kubectl get pods -n kube-system` |
 
-### Deploy
+### Start from master Node 
+#### 1. config public key authentication
 There are many machines in the management platform, and ansible is needed to batch operation machines to save time. It is necessary to deploy root free from the deployment node to other nodes.
-
 ``` shell
+# modify node_ips to your nodes, and run below script
 node_ips="master_ip node1_ip node2_ip ..."
 test -f /root/.ssh/id_rsa || ssh-keygen -N '' -t rsa -f /root/.ssh/id_rsa  # create ssh key if not exist 
 # add ssh key to other nodes, and input password manually
@@ -33,12 +34,10 @@ for ip in $node_ips; do
   ssh-copy-id "$ip" || { echo "failed on $ip."; break; }  #exit if failed
 done
 ```
-### Install Ansible 
-#### 1) offline deploy
+#### 2. Install Ansible 
 ``` shell
 yum -y localinstall ansible-2.9.27-1.el7.ans.noarch.rpm
 ```
-#### 2) check version
 ``` shell
 $ ansible --version
 ansible 2.9.27
@@ -49,10 +48,10 @@ ansible 2.9.27
   python version = 3.6.8 (default, Nov 16 2020, 16:55:22) [GCC 4.8.5 20150623 (Red Hat 4.8.5-44)]
 ```
 
-#### 3) config ansible
+#### 3. config ansible
 ``` shell
+# modify hosts file
 $ vim /etc/ansible/hosts
-
 [master]
 10.3.174.228    node_name=master
 
@@ -68,7 +67,7 @@ $ vim /etc/ansible/hosts
 master
 worker
 ```
-#### 4) disable host key checking
+#### 4. disable host key checking
 ``` shell
 $ vi /etc/ansible/ansible.cfg
 # modify below config
@@ -76,19 +75,21 @@ $ vi /etc/ansible/ansible.cfg
 host_key_checking = False
 ``` 
 
-#### 5) make directory of work,log,data,upload
+#### 5. make directory of work,log,data,upload
 ``` shell
-ansible k8s -m command -a "mkdir -p /iflytek/{server,log,data,upload}"
+ansible k8s -m command -a "mkdir -p /iflytek/server"
+ansible k8s -m command -a "mkdir -p /iflytek/log"
+ansible k8s -m command -a "mkdir -p /iflytek/data"
+ansible k8s -m command -a "mkdir -p /iflytek/upload"
+ansible k8s -m command -a "ls -l /iflytek"
 ```
 
-### 6) prepare basic env
-
-kernel and network config
+#### 6. kernel and network config
 ```shell
-cd /iflytek/upload && vim system_set.sh
+vi /iflytek/upload/system_set.sh
 ```
-add script content below:
-``` shell
+add content below to system_set.sh
+```shell
 #!/bin/bash
 sed -ri.k8s.bak '/k8s config begin/,/k8s config end/d' /etc/sysctl.conf
     cat >> "/etc/sysctl.conf" << EOF
@@ -108,7 +109,7 @@ EOF
     sysctl --system
     # ulimit
     sed -ri.k8s.bak '/k8s config begin/,/k8s config end/d' /etc/security/limits.conf
-    cat > /etc/security/limits.conf << EOF
+    cat >> /etc/security/limits.conf << EOF
 # k8s config begin
 * soft memlock unlimited
 * hard memlock unlimited
@@ -125,7 +126,7 @@ ansible k8s -m copy -a 'src=/iflytek/upload/system_set.sh dest=/iflytek/upload'
 ansible k8s -m command -a 'sh /iflytek/upload/system_set.sh'
 ```
 
-Disable SELINUX and firewalld
+disable SELINUX and firewalld
 ``` shell
 ansible k8s -m command -a "setenforce 0"
 ansible k8s -m command -a "sed --follow-symlinks -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config"
@@ -135,7 +136,7 @@ ansible k8s -m command -a "swapoff -a"
 ```
 add hosts
 ```shell
-cd /iflytek/upload && vim hosts_set.sh
+vi /iflytek/upload/hosts_set.sh
 ```
 add script content below
 ``` shell
@@ -154,20 +155,22 @@ run script
 ansible k8s -m copy -a 'src=/iflytek/upload/hosts_set.sh dest=/iflytek/upload'
 ansible k8s -m command -a 'sh /iflytek/upload/hosts_set.sh'
 ```
-### install docker 19.03.9
+### Install docker 19.03.9 on master
+
+#### 1. install docker rpm
 ``` shell
-2) offline install
-# upload docker-ce.19.03.9.tar.gz to /iflytek/upload
-cd /iflytek/upload/*
-$ yum -y localinstall *.rpm
+# upload docker-rpm.tar.gz to /iflytek/upload and unzip it
+tar -zxvf docker-rpm.tgz -C /iflytek/upload/
+# install docker
+yum -y localinstall /iflytek/upload/docker-rpm/*
 ``` 
-3) start docker and check version
+#### 2. start docker and check version
 ``` shell
-$ systemctl start docker 
-$ systemctl status docker
-$ systemctl enable docker
+systemctl start docker 
+systemctl status docker
+systemctl enable docker
 ```
-4) check docker version
+#### 3. check docker version
 ``` shell 
 $ docker version
 Client: Docker Engine - Community
@@ -198,35 +201,107 @@ Server: Docker Engine - Community
   Version:          0.18.0
   GitCommit:        fec3683
 ```
-### install docker-compose v2.9.0
+#### 4. install docker-compose v2.9.0
 ``` shell
-1) offline install
-# upload docker-compose-Linux-x86_64-v2.9.0.tar.gz to /iflytek/upload/docker-compose
-2）grant execute permission
-$ mv docker-compose /usr/local/bin/
-$ chmod +x /usr/local/bin/docker-compose
+# grant execute permission
+cp /iflytek/upload/docker-rpm/docker-compose /usr/local/bin/
+chmod +x /usr/local/bin/docker-compose
+# check docker-compose version
 $ docker-compose version
 Docker Compose version v2.9.0
 ```
 
-### install harbor v2.4.3
 
-1) unzip harbor-offline-installer-v2.4.3.tgz
+### Install docker for all nodes
+
+---
+#### 1. upload docker-rpm.tgz to /iflytek/upload
 ``` shell
-$ tar -xzcf harbor-offline-installer-v2.4.3.tgz -C /iflytek/server/harbor
-$ cd /iflytek/server/harbor/
-``` 
-2) modify harbor.cfg
-``` shell
-$ mv harbor.yml.tmpl harbor.yml
-$ vim harbor.yml
+$ ls /iflytek/upload/docker-rpm.tgz
+# distribute package
+$ ansible k8s -m copy -a "src=/iflytek/upload/docker-rpm.tgz dest=/iflytek/upload/"
+# expected result
+CHANGED => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    }, 
+    "changed": true, 
+    "checksum": "acd3897edb624cd18a197bcd026e6769797f4f05", 
+    "dest": "/iflytek/upload/docker-rpm.tgz", 
+    "gid": 0, 
+    "group": "root", 
+    "md5sum": "3ba6d9fe6b2ac70860b6638b88d3c89d", 
+    "mode": "0644", 
+    "owner": "root", 
+    "secontext": "system_u:object_r:usr_t:s0", 
+    "size": 103234394, 
+    "src": "/root/.ansible/tmp/ansible-tmp-1661836788.82-13591-17885284311930/source", 
+    "state": "file", 
+    "uid": 0
+}
 ```
-3) config harbor
+
+#### 2. unzip docker-rpm.tgz and install docker
 ``` shell
-hostname: 10.3.174.251
-http.port: 8090
+ansible k8s -m shell -a "tar -zxvf /iflytek/upload/docker-rpm.tgz -C /iflytek/upload/ && yum -y localinstall /iflytek/upload/docker-rpm/*"
+```
+#### 3. enable boot up && start docker
+``` shell
+ansible k8s -m shell -a "systemctl enable docker && systemctl start docker"
+```
+#### 4. check docker version
+``` shell
+ansible k8s -m shell -a "docker version"
+# expected result
+Client: Docker Engine - Community
+ Version:           19.03.9
+ API version:       1.40
+ Go version:        go1.13.10
+ Git commit:        9d988398e7
+ Built:             Fri May 15 00:25:27 2020
+ OS/Arch:           linux/amd64
+ Experimental:      false
+
+Server: Docker Engine - Community
+ Engine:
+  Version:          19.03.9
+  API version:      1.40 (minimum version 1.12)
+  Go version:       go1.13.10
+  Git commit:       9d988398e7
+  Built:            Fri May 15 00:24:05 2020
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          1.4.9
+  GitCommit:        e25210fe30a0a703442421b0f60afac609f950a3
+ runc:
+  Version:          1.0.1
+  GitCommit:        v1.0.1-0-g4144b63
+ docker-init:
+  Version:          0.18.0
+  GitCommit:        fec3683
+```
+
+### install harbor v2.4.3 on harbor node
+``` shell
+# unzip harbor-offline-installer-v2.4.3.tgz
+scp harbor-offline-installer-v2.4.3.tgz root@harbor_ip:/iflytek/upload/
+ssh root@harbor_ip
+cd /iflytek/upload/
+tar -zxvf harbor-offline-installer-v2.4.3.tgz -C /iflytek/server/
+cd /iflytek/server/harbor/
+``` 
+``` shell
+# modify harbor.cfg
+$ cp harbor.yml.tmpl harbor.yml
+$ vi harbor.yml
+```
+3) config harbor as below
+``` shell
+hostname: harbor_ip
+http.port: 80
 data_volume: /iflytek/data/harbor
-log.location: /iflytek/logs/harbor
+log.location: /iflytek/log/harbor
 ```
 4) import harbor images
 ``` shell
@@ -258,78 +333,6 @@ goharbor/prepare                v2.4.3    c882d74725ee   4 weeks ago   268MB
 ./install.sh --with-chartmuseum
 ```
 
-### build runtime env for all nodes
-
----
-1) upload docker-rpm.tgz to /iflytek/upload
-``` shell
-$ ls /iflytek/upload/docker-rpm.tgz
-```
-2) distribute package
-``` shell
-$ ansible k8s -m copy -a "src=/iflytek/upload/docker-rpm.tgz dest=/iflytek/upload/"
-# expected result
-CHANGED => {
-    "ansible_facts": {
-        "discovered_interpreter_python": "/usr/bin/python"
-    }, 
-    "changed": true, 
-    "checksum": "acd3897edb624cd18a197bcd026e6769797f4f05", 
-    "dest": "/iflytek/upload/docker-rpm.tgz", 
-    "gid": 0, 
-    "group": "root", 
-    "md5sum": "3ba6d9fe6b2ac70860b6638b88d3c89d", 
-    "mode": "0644", 
-    "owner": "root", 
-    "secontext": "system_u:object_r:usr_t:s0", 
-    "size": 103234394, 
-    "src": "/root/.ansible/tmp/ansible-tmp-1661836788.82-13591-17885284311930/source", 
-    "state": "file", 
-    "uid": 0
-}
-```
-
-3) untar docker-rpm.tgz and install docker
-``` shell
-$ ansible k8s -m shell -a "tar xzvf /iflytek/upload/docker-rpm.tgz -C /iflytek/upload/ && yum -y install /iflytek/upload/docker-rpm/*"
-```
-4) 设置开机自启并启动
-set boot up and start docker
-``` shell
-$ ansible k8s -m shell -a "systemctl enable docker && systemctl start docker"
-```
-5) check docker version
-``` shell
-$ ansible k8s -m shell -a "docker version"
-# expected result
-Client: Docker Engine - Community
- Version:           19.03.9
- API version:       1.40
- Go version:        go1.13.10
- Git commit:        9d988398e7
- Built:             Fri May 15 00:25:27 2020
- OS/Arch:           linux/amd64
- Experimental:      false
-
-Server: Docker Engine - Community
- Engine:
-  Version:          19.03.9
-  API version:      1.40 (minimum version 1.12)
-  Go version:       go1.13.10
-  Git commit:       9d988398e7
-  Built:            Fri May 15 00:24:05 2020
-  OS/Arch:          linux/amd64
-  Experimental:     false
- containerd:
-  Version:          1.4.9
-  GitCommit:        e25210fe30a0a703442421b0f60afac609f950a3
- runc:
-  Version:          1.0.1
-  GitCommit:        v1.0.1-0-g4144b63
- docker-init:
-  Version:          0.18.0
-  GitCommit:        fec3683
-```
 ### install kubernetes 
 
 ---
