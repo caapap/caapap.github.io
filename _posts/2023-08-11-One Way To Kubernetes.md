@@ -410,7 +410,8 @@ CHANGED => {
 ```
 #### 2. install kubeadm-rpm
 ```shell
-$ ansible k8s -m shell -a "tar -zxvf /iflytek/upload/kubeadm-rpm.tgz -C /iflytek/upload/ && yum install -y /iflytek/upload/kubeadm-rpm/*.rpm"
+$ ansible k8s -m shell -a "tar -zxvf /iflytek/upload/kubeadm-rpm.tgz -C /iflytek/upload/"
+$ ansible k8s -m shell -a "yum install -y /iflytek/upload/kubeadm-rpm/*.rpm"
 ```
 #### 3. set boot up
 ```shell
