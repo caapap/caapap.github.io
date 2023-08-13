@@ -283,6 +283,9 @@ Server: Docker Engine - Community
 ```
 
 ### install harbor v2.4.3 on harbor node
+#### 1. upload harbor package 
+``` shell
+``` shell
 ``` shell
 # unzip harbor-offline-installer-v2.4.3.tgz
 scp harbor-offline-installer-v2.4.3.tgz root@harbor_ip:/iflytek/upload/
@@ -291,19 +294,56 @@ cd /iflytek/upload/
 tar -zxvf harbor-offline-installer-v2.4.3.tgz -C /iflytek/server/
 cd /iflytek/server/harbor/
 ``` 
+#### 2. config harbor.yml as below
 ``` shell
 # modify harbor.cfg
 $ cp harbor.yml.tmpl harbor.yml
 $ vi harbor.yml
 ```
-3) config harbor as below
 ``` shell
 hostname: harbor_ip
-http.port: 80
 data_volume: /iflytek/data/harbor
 log.location: /iflytek/log/harbor
+certificate: /iflytek/data/ssl/harbor01.crt
+private_key: /iflytek/data/ssl/harbor01.key
+ca
 ```
-4) import harbor images
+#### 3. generate ssl certificate
+``` shell
+mkdir -p /iflytek/data/ssl
+cd /iflytek/data/ssl
+# generate ca.key && ca.pem
+$ openssl genrsa -out ca.key 3072
+$ openssl req -new -x509 -days 3650 -key ca.key -out ca.pem
+
+Country Name (2 letter code) [XX]:CN
+State or Province Name (full name) []:Hefei
+Locality Name (eg, city) [Default City]:Hefei
+# other info can be empty
+
+# generate harbor01.key && harbor01.csr for domain name
+$ openssl genrsa -out harbor01.key 3072
+$ openssl req -new -key harbor01.key -out harbor01.csr
+```
+show as below
+``` shell
+Country Name (2 letter code) [XX]:CN
+State or Province Name (full name) []:Hefei
+Locality Name (eg, city) [Default City]:Hefei
+Common Name (eg, your name or your server's hostname) []:hostname  
+```
+sign harbor01.csr with ca.key && ca.pem
+``` shell
+$ openssl x509 -req -in harbor01.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out harbor01.pem -days 3650
+```
+show as below
+``` shell
+Signature ok
+subject=C = CN, ST = Hefei, L = Hefei, CN = hostname
+Getting CA Private Key
+```
+
+#### 4. import harbor images
 ``` shell
 $ docker load -i harbor.v2.4.3.tar.gz 
 # wait to import images
@@ -326,17 +366,67 @@ goharbor/harbor-db              v2.4.3    7693d44a2ad6   4 weeks ago   225MB
 goharbor/prepare                v2.4.3    c882d74725ee   4 weeks ago   268MB
 ```
 
-5) start harbor
+#### 5. start harbor
 ``` shell
 ./prepare
 ./install.sh --help
 ./install.sh --with-chartmuseum
 ```
 
-### install kubernetes 
-
 ---
+### Install kubernetes 
+
 ```shell
 $ mkdir -p /iflytek/repo/kubeadm-rpm
 $ yum install -y kubelet-1.20.11 kubeadm-1.20.11 kubectl-1.20.11 --downloadonly --downloaddir=/iflytek/repo/kubeadm-rpm
 ```
+
+#### 1. upload kubeadm-rpm to k8s master node
+```shell
+$ ls /iflytek/upload/
+kubeadm-rpm.tar.gz
+$ ansible k8s -m copy -a "src=/iflytek/upload/kubeadm-rpm.tgz dest=/iflytek/upload/kubeadm-rpm.tgz"
+```
+show as below
+```shell
+CHANGED => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    }, 
+    "changed": true, 
+    "checksum": "3fe96fe1aa7f4a09d86722f79f36fb8fde69facb", 
+    "dest": "/export/upload/kubeadm-rpm.tgz", 
+    "gid": 0, 
+    "group": "root", 
+    "md5sum": "80d5bda420db6ea23ad75dcf0f76e858", 
+    "mode": "0644", 
+    "owner": "root", 
+    "secontext": "system_u:object_r:usr_t:s0", 
+    "size": 67423355, 
+    "src": "/root/.ansible/tmp/ansible-tmp-1661840257.4-33361-139823848282879/source", 
+    "state": "file", 
+    "uid": 0
+}
+```
+#### 2. install kubeadm-rpm
+```shell
+$ ansible k8s -m shell -a "tar -zxvf /iflytek/upload/kubeadm-rpm.tgz -C /iflytek/upload/ && yum install -y /iflytek/upload/kubeadm-rpm/*.rpm"
+```
+#### 3. set boot up
+```shell
+$ ansible k8s -m shell -a "systemctl enable kubelet && systemctl start kubelet"
+$ journalctl -xefu kubelet
+```
+
+#### 4. distribute dependency images
+```shell
+ls /export/upload
+docker load -i google_containers-coredns-v1.8.4.tar
+docker load -i google_containers-etcd:3.5.0-0.tar
+docker load -i google_containers-kube-apiserver:v1.22.4.tar
+docker load -i google_containers-kube-controller-manager-v1.22.4.tar
+docker load -i google_containers-kube-proxy-v1.22.4.tar
+docker load -i google_containers-kube-scheduler-v1.22.4.tar
+docker load -i google_containers-pause-3.5.tar
+docker load -i rancher-mirrored-flannelcni-flannel-cni-plugin-v1.1.0.tar
+docker load -i rancher-mirrored-flannelcni-flannel-v0.19.1.tar
