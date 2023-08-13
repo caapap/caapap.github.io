@@ -58,7 +58,7 @@ $ vim /etc/ansible/hosts
 [worker]
 10.3.174.234    node_name=node1
 10.3.174.237    node_name=node2
-10.3.174.251    node_name=node3
+10.3.174.251    node_name=harbor01
 
 [etcd]
 10.3.174.228    etcd_name=master
@@ -147,7 +147,7 @@ cat > /etc/hosts << EOF
 10.3.174.228   master
 10.3.174.234   node1
 10.3.174.237   node2
-10.3.174.251   node3
+10.3.174.251   harbor01
 EOF
 ```
 run script
@@ -285,8 +285,7 @@ Server: Docker Engine - Community
 ### install harbor v2.4.3 on harbor node
 #### 1. upload harbor package 
 ``` shell
-``` shell
-``` shell
+
 # unzip harbor-offline-installer-v2.4.3.tgz
 scp harbor-offline-installer-v2.4.3.tgz root@harbor_ip:/iflytek/upload/
 ssh root@harbor_ip
@@ -306,7 +305,6 @@ data_volume: /iflytek/data/harbor
 log.location: /iflytek/log/harbor
 certificate: /iflytek/data/ssl/harbor01.crt
 private_key: /iflytek/data/ssl/harbor01.key
-ca
 ```
 #### 3. generate ssl certificate
 ``` shell
@@ -368,7 +366,7 @@ goharbor/prepare                v2.4.3    c882d74725ee   4 weeks ago   268MB
 
 #### 5. start harbor
 ``` shell
-./prepare
+./prepare # if harbor.yml changed，execute it update
 ./install.sh --help
 ./install.sh --with-chartmuseum
 ```
@@ -421,13 +419,25 @@ $ journalctl -xefu kubelet
 
 #### 4. distribute dependency images
 ```shell
-ls /export/upload
-docker load -i google_containers-coredns-v1.8.4.tar
-docker load -i google_containers-etcd:3.5.0-0.tar
-docker load -i google_containers-kube-apiserver:v1.22.4.tar
-docker load -i google_containers-kube-controller-manager-v1.22.4.tar
-docker load -i google_containers-kube-proxy-v1.22.4.tar
-docker load -i google_containers-kube-scheduler-v1.22.4.tar
-docker load -i google_containers-pause-3.5.tar
-docker load -i rancher-mirrored-flannelcni-flannel-cni-plugin-v1.1.0.tar
-docker load -i rancher-mirrored-flannelcni-flannel-v0.19.1.tar
+
+docker push docker.kxdigit.com/library/coredns:v1.8.4
+docker push docker.kxdigit.com/library/etcd:3.5.0-0
+docker push docker.kxdigit.com/library/kube-apiserver:v1.22.4
+docker push docker.kxdigit.com/library/kube-controller-manager:v1.22.4
+docker push docker.kxdigit.com/library/kube-proxy:v1.22.4
+docker push docker.kxdigit.com/library/kube-scheduler:v1.22.4
+docker push docker.kxdigit.com/library/pause:3.5
+docker push docker.kxdigit.com/library/mirrored-flannelcni-flannel-cni-plugin:v1.1.0
+docker push docker.kxdigit.com/library/mirrored-flannelcni-flannel:v0.19.1
+```
+```shell
+kubeadm init \
+--control-plane-endpoint "10.132.10.91:6443" \
+--image-repository 10.132.10.100/community \
+--kubernetes-version v1.22.4 \
+--service-cidr=172.16.0.0/16 \
+--pod-network-cidr=10.244.0.0/16 \
+--token "abcdef.0123456789abcdef" \
+--token-ttl "0" \
+--upload-certs
+```
