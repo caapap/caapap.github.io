@@ -437,7 +437,7 @@ docker push docker.kxdigit.com/library/mirrored-flannelcni-flannel:v0.19.1
 kubeadm init \
 --control-plane-endpoint "192.168.5.169" \
 --image-repository 192.168.5.129/library \
---kubernetes-version v1.22.4 \
+--kubernetes-version v1.20.11 \
 --service-cidr=10.96.0.0/12 \
 --pod-network-cidr=10.244.0.0/16 \
 --token "abcdef.0123456789abcdef" \
