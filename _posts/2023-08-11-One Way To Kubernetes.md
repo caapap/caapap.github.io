@@ -1,21 +1,9 @@
 ---
 layout: post
 ---
-How to install Kubernetes on Centos7.9  
-Software requirements:
-```
-Kubernetes: 1.20.11
-Docker: 19.03.9
-CNI: flannel
-```
+Install kubernetes cluster with ansible  
 
 ### Requirements
-
-### network env
-
-`K8S_SVC_CIDR=10.96.0.0/12 `
-
-`K8S_POD_CIDR=10.244.0.0/16`
 
 ---
 #### 1. description
@@ -34,8 +22,7 @@ CNI: flannel
 | kubenetes |  default version 1.20.11 | `kubectl version` |
 | CNI | flannel 0.13.0 or higher | `kubectl get pods -n kube-system` |
 
-#### 2. deploy detail
-
+### Deploy
 There are many machines in the management platform, and ansible is needed to batch operation machines to save time. It is necessary to deploy root free from the deployment node to other nodes.
 
 ``` shell
