@@ -22,6 +22,9 @@ Install kubernetes cluster with ansible
 | kubenetes |  default version 1.20.11 | `kubectl version` |
 | CNI | flannel 0.13.0 or higher | `kubectl get pods -n kube-system` |
 
+K8S_SVC_CIDR=${K8S_SVC_CIDR:-10.96.0.0/12}
+K8S_POD_CIDR=${K8S_POD_CIDR:-10.244.0.0/16}
+
 ### Start from master Node 
 #### 1. config public key authentication
 There are many machines in the management platform, and ansible is needed to batch operation machines to save time. It is necessary to deploy root free from the deployment node to other nodes.
@@ -432,12 +435,13 @@ docker push docker.kxdigit.com/library/mirrored-flannelcni-flannel:v0.19.1
 ```
 ```shell
 kubeadm init \
---control-plane-endpoint "10.132.10.91:6443" \
---image-repository 10.132.10.100/community \
+--control-plane-endpoint "192.168.5.169" \
+--image-repository 192.168.5.129/library \
 --kubernetes-version v1.22.4 \
---service-cidr=172.16.0.0/16 \
+--service-cidr=10.96.0.0/12 \
 --pod-network-cidr=10.244.0.0/16 \
 --token "abcdef.0123456789abcdef" \
 --token-ttl "0" \
 --upload-certs
 ```
+
