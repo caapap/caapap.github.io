@@ -435,15 +435,6 @@ $ journalctl -xefu kubelet
 #### 4. distribute dependency images
 ```shell
 
-docker push docker.kxdigit.com/library/coredns:v1.8.4
-docker push docker.kxdigit.com/library/etcd:3.5.0-0
-docker push docker.kxdigit.com/library/kube-apiserver:v1.22.4
-docker push docker.kxdigit.com/library/kube-controller-manager:v1.22.4
-docker push docker.kxdigit.com/library/kube-proxy:v1.22.4
-docker push docker.kxdigit.com/library/kube-scheduler:v1.22.4
-docker push docker.kxdigit.com/library/pause:3.5
-docker push docker.kxdigit.com/library/mirrored-flannelcni-flannel-cni-plugin:v1.1.0
-docker push docker.kxdigit.com/library/mirrored-flannelcni-flannel:v0.19.1
 ```
 ```shell
 kubeadm init \
