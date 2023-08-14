@@ -133,8 +133,8 @@ disable SELINUX and firewalld
 ``` shell
 ansible k8s -m command -a "setenforce 0"
 ansible k8s -m command -a "sed --follow-symlinks -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config"
-ansible k8s -m command -a "firewall-cmd --set-default-zone=trusted"
-ansible k8s -m command -a "firewall-cmd --complete-reload"
+ansible k8s -m command -a "systemctl stop firewalld"
+ansible k8s -m command -a "systemctl disable firewalld"
 ansible k8s -m command -a "swapoff -a"
 ```
 add hosts
@@ -157,9 +157,48 @@ run script
 ``` shell
 ansible k8s -m copy -a 'src=/iflytek/upload/hosts_set.sh dest=/iflytek/upload'
 ansible k8s -m command -a 'sh /iflytek/upload/hosts_set.sh'
+
+# install ntp
+ansible all -a "yum install -y ntp"
+# set timezone
+ansible all -a "timedatectl set-timezone Asia/Shanghai"
+
+
+# modify ntp server ip 
+vi /iflytek/upload/ntp_set.sh
+# add script content below:
+#!/bin/bash
+    cat <<EOF > /etc/ntp.conf
+driftfile /var/lib/ntp/drift
+restrict 127.0.0.1
+restrict -6 ::1
+server $master_ip
+includefile /etc/ntp/crypto/pw
+keys /etc/ntp/keys
+EOF
+```
+``` shell
+ansible k8s -m copy -a 'src=/iflytek/upload/ntp_set.sh dest=/iflytek/upload'
+ansible k8s -m command -a 'sh /iflytek/upload/ntp_set.sh'
+```
+
+```shell
+# modify ntp server ip
+# excute below command on master node
+    cat <<EOF > /etc/ntp.conf
+driftfile /var/lib/ntp/drift
+restrict 127.0.0.1
+restrict -6 ::1
+server 127.127.1.0
+fudge  127.127.1.0 stratum 10
+includefile /etc/ntp/crypto/pw
+keys /etc/ntp/keys
+EOF
+```
+```shell
+ansible k8s -m shell -a "systemctl restart ntpd;systemctl enable ntpd"
 ```
 ### Install docker 19.03.9 on master
-
 #### 1. install docker rpm
 ``` shell
 # upload docker-rpm.tar.gz to /iflytek/upload and unzip it
@@ -176,33 +215,6 @@ systemctl enable docker
 #### 3. check docker version
 ``` shell 
 $ docker version
-Client: Docker Engine - Community
- Version:           19.03.9
- API version:       1.40
- Go version:        go1.13.10
- Git commit:        9d988398e7
- Built:             Fri May 15 00:25:27 2020
- OS/Arch:           linux/amd64
- Experimental:      false
-
-Server: Docker Engine - Community
- Engine:
-  Version:          19.03.9
-  API version:      1.40 (minimum version 1.12)
-  Go version:       go1.13.10
-  Git commit:       9d988398e7
-  Built:            Fri May 15 00:24:05 2020
-  OS/Arch:          linux/amd64
-  Experimental:     false
- containerd:
-  Version:          1.4.9
-  GitCommit:        e25210fe30a0a703442421b0f60afac609f950a3
- runc:
-  Version:          1.0.1
-  GitCommit:        v1.0.1-0-g4144b63
- docker-init:
-  Version:          0.18.0
-  GitCommit:        fec3683
 ```
 #### 4. install docker-compose v2.9.0
 ``` shell
